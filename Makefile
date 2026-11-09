@@ -4,7 +4,7 @@
 EE_BIN = 4conexoes.elf
 EE_BIN_PACKED = 4conexoes-packed.elf
 EE_OBJS = src/main_ps2.o src/platform_ps2.o src/game.o src/board.o \
-          src/ai.o src/font.o
+          src/ai.o src/font.o src/bigfont.o src/lang.o src/assets.o
 
 GSKIT ?= $(PS2DEV)/gsKit
 

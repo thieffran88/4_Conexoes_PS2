@@ -2,7 +2,9 @@
 
 Jogo de estratégia para PlayStation 2 em que dois jogadores tentam alinhar quatro peças numa grade vertical. Usa as mecânicas do clássico "ligue 4" (Connect 4, da Hasbro), com arte, código e nome próprios.
 
-![Tela de título](docs/screens/titulo.png)
+| Abertura | Idioma | Menu |
+|---|---|---|
+| ![](docs/screens/abertura.png) | ![](docs/screens/idioma.png) | ![](docs/screens/titulo.png) |
 
 ## Regras
 
@@ -28,15 +30,20 @@ A caixa do jogo original traz modos extras. O 4 Conexões tem um baseado no *Pop
 | Partida | Vitória | Modo Retirada |
 |---|---|---|
 | ![](docs/screens/partida.png) | ![](docs/screens/vitoria.png) | ![](docs/screens/retirada.png) |
+| **Como jogar** | **Español** | **English** |
+| ![](docs/screens/como-jogar.png) | ![](docs/screens/espanhol.png) | ![](docs/screens/ingles.png) |
 
 ## Recursos
 
+- **Três idiomas: Português, Inglês e Espanhol.** O idioma é escolhido logo depois da tela de abertura e pode ser trocado no menu.
+- **Personagens:** o jogador 1 (vermelho) é o garoto de boné e o jogador 2 (amarelo) é a garota de rabo de cavalo. Os retratos mudam de expressão durante a partida (concentração, surpresa, comemoração, tristeza) e as poses de corpo inteiro reagem à vitória, à derrota e ao console "pensando".
+- Interface no estilo cartum feita com as sprites do projeto: logotipo, fonte amarela com contorno, peças, ícones e botões do controle.
 - **1 jogador contra o console**, com três níveis: Fácil, Médio e Difícil. A IA usa busca minimax com poda alfa-beta.
 - **2 jogadores**. Com dois controles conectados, cada jogador usa o seu. Com um só, os dois revezam o mesmo controle.
 - Placar de vitórias e empates durante a sessão.
 - Animação da peça caindo (com quique) e da retirada.
 - Prévia da casa onde a peça vai cair. A linha vencedora pisca no fim da partida.
-- Tela "Como jogar" com regras e controles. Todos os textos estão em português, com acentos.
+- Tela "Como jogar" com regras e controles, nos três idiomas e com acentos (incluindo Ñ, ¡ e ¿).
 - Funciona em NTSC e PAL: o layout se ajusta à resolução.
 
 ## Controles
@@ -57,6 +64,9 @@ src/
   board.c/h          regras: gravidade, turnos, vitória, empate, retirada
   ai.c/h             adversário: negamax com poda alfa-beta
   font.c/h           fonte bitmap 5x7 com acentos (UTF-8)
+  bigfont.c/h        fonte grande recortada da arte (títulos e botões)
+  lang.c/h           textos em Português, Inglês e Espanhol
+  assets.c/h         tabelas das sprites (gerado por tools/make_assets.py)
   game.c/h           telas, menus, animações e desenho
   platform.h         interface de vídeo e controles
   platform_ps2.c     implementação para PS2 (gsKit + libpad)
@@ -64,7 +74,21 @@ src/
 host/                versão para PC (renderização por software) usada em
                      testes e capturas de tela
 tests/test_board.c   testes de regras e IA
+assets/src/          folhas de arte originais (capa, personagens, interface, fonte)
+assets/assets.pak    pixels das sprites, já no formato do GS (embutido no ELF)
+tools/make_assets.py recorta as folhas, remove o fundo e gera o .pak
 ```
+
+### Recursos gráficos
+
+As sprites são recortadas das folhas em `assets/src/`. O script remove o fundo branco, redimensiona as imagens e gera `assets/assets.pak` + `src/assets.c/h`. Os arquivos gerados já estão no repositório; só é preciso rodar o script de novo se a arte mudar:
+
+```sh
+pip install pillow numpy scipy
+python3 tools/make_assets.py
+```
+
+No PS2, as texturas ficam na RAM e o gerenciador de texturas do gsKit as envia para a VRAM conforme o uso. A capa usa 16 bits por pixel e as demais sprites, 32 bits com transparência.
 
 A lógica (`board`, `ai`, `game`, `font`) não depende do hardware. Toda a parte específica do PS2 fica em `platform_ps2.c`.
 

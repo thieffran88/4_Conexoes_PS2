@@ -10,15 +10,15 @@ CORE = src/board.c src/ai.c
 all: test host
 
 tests/test_board: tests/test_board.c $(CORE)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^) $(LDLIBS)
 
 test: tests/test_board
 	./tests/test_board
 
 host: 4conexoes_host
 
-4conexoes_host: host/main_host.c host/platform_host.c src/game.c src/font.c $(CORE)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+4conexoes_host: host/main_host.c host/platform_host.c src/game.c src/font.c src/bigfont.c src/lang.c src/assets.c assets/assets.pak $(CORE)
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^) $(LDLIBS)
 
 clean:
 	rm -f tests/test_board 4conexoes_host

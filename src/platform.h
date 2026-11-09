@@ -36,6 +36,11 @@ void plat_tri(float x1, float y1, float x2, float y2, float x3, float y3,
               Color c);
 void plat_gradient(float x, float y, float w, float h, Color top,
                    Color bottom);
+/* Desenha a sprite 'id' (ver assets.h) no retângulo (x, y, w, h),
+ * usando a região (u0, v0)-(u1, v1) da textura, em texels. 'tint'
+ * multiplica as cores (branco opaco = sem alteração). */
+void plat_sprite(int id, float x, float y, float w, float h, float u0,
+                 float v0, float u1, float v1, Color tint);
 void plat_end_frame(void);
 
 /* Botões pressionados no controle 'pad' (0 ou 1). */

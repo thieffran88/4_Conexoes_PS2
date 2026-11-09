@@ -67,6 +67,17 @@ static const unsigned char GLYPHS[][GLYPH_H] = {
     {0x1F,0x01,0x02,0x04,0x08,0x10,0x1F}, /* Z */
 };
 
+/* Glifos extras: setas e pontuação espanhola invertida. */
+static const unsigned char EXTRA[][GLYPH_H] = {
+    {0x00,0x04,0x08,0x1F,0x08,0x04,0x00}, /* ← */
+    {0x00,0x04,0x02,0x1F,0x02,0x04,0x00}, /* → */
+    {0x04,0x0E,0x15,0x04,0x04,0x04,0x00}, /* ↑ */
+    {0x00,0x04,0x04,0x04,0x15,0x0E,0x04}, /* ↓ */
+    {0x04,0x00,0x04,0x04,0x04,0x04,0x04}, /* ¡ */
+    {0x04,0x00,0x04,0x08,0x10,0x11,0x0E}, /* ¿ */
+};
+#define EXTRA_BASE 128
+
 enum { ACC_NONE, ACC_ACUTE, ACC_GRAVE, ACC_CIRC, ACC_TILDE, ACC_CEDIL };
 
 /* Marcas de 2 linhas: acentos acima da letra, cedilha abaixo. */
@@ -121,6 +132,13 @@ static int decompose(unsigned int cp, int *mark)
     case 0xD5: *mark = ACC_TILDE; return 'O';
     case 0xDA: *mark = ACC_ACUTE; return 'U';
     case 0xC7: *mark = ACC_CEDIL; return 'C';
+    case 0xD1: *mark = ACC_TILDE; return 'N';
+    case 0x2190: case 0x01: return EXTRA_BASE + 0;
+    case 0x2192: case 0x02: return EXTRA_BASE + 1;
+    case 0x2191: return EXTRA_BASE + 2;
+    case 0x2193: return EXTRA_BASE + 3;
+    case 0xA1: return EXTRA_BASE + 4;
+    case 0xBF: return EXTRA_BASE + 5;
     default: break;
     }
     if (cp >= 32 && cp <= 'Z')
@@ -163,7 +181,8 @@ void font_draw(const char *text, float x, float y, float scale,
     while (*text) {
         int mark, row;
         int ch = decompose(next_cp(&text), &mark);
-        const unsigned char *g = GLYPHS[ch - 32];
+        const unsigned char *g = ch >= EXTRA_BASE ? EXTRA[ch - EXTRA_BASE]
+                                                  : GLYPHS[ch - 32];
 
         for (row = 0; row < GLYPH_H; row++)
             draw_bits(g[row], x, y + row * scale, scale, rect, user);

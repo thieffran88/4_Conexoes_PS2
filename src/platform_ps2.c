@@ -2,6 +2,7 @@
  * Implementação da plataforma para o PlayStation 2 (PS2SDK + gsKit).
  */
 #include <stdio.h>
+#include <string.h>
 #include <kernel.h>
 #include <sifrpc.h>
 #include <loadfile.h>
@@ -9,9 +10,11 @@
 #include <gsKit.h>
 #include <dmaKit.h>
 
+#include "assets.h"
 #include "platform.h"
 
 static GSGLOBAL *gs;
+static GSTEXTURE textures[SPR_COUNT];
 static char pad_buf[2][256] __attribute__((aligned(64)));
 
 static u64 to_gs(Color c)
@@ -21,6 +24,31 @@ static u64 to_gs(Color c)
     a = (a * 128 + 127) / 255;
     return GS_SETREG_RGBAQ((c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF, a,
                            0x00);
+}
+
+/* Cor de modulação de textura: no GS, 0x80 = 1.0. */
+static u64 to_gs_tint(Color c)
+{
+    unsigned int r = ((c >> 16) & 0xFF) * 128 / 255;
+    unsigned int g = ((c >> 8) & 0xFF) * 128 / 255;
+    unsigned int b = (c & 0xFF) * 128 / 255;
+    unsigned int a = ((c >> 24) & 0xFF) * 128 / 255;
+    return GS_SETREG_RGBAQ(r, g, b, a, 0x00);
+}
+
+static void init_textures(void)
+{
+    int i;
+    for (i = 0; i < SPR_COUNT; i++) {
+        const AssetSprite *sp = &g_sprites[i];
+        GSTEXTURE *t = &textures[i];
+        memset(t, 0, sizeof(*t));
+        t->Width = sp->w;
+        t->Height = sp->h;
+        t->PSM = sp->psm == ASSET_PSM_CT32 ? GS_PSM_CT32 : GS_PSM_CT16;
+        t->Mem = (u32 *)(g_asset_pak + sp->offset);
+        t->Filter = GS_FILTER_LINEAR;
+    }
 }
 
 static void init_pads(void)
@@ -60,6 +88,9 @@ int plat_init(void)
     gsKit_set_test(gs, GS_ZTEST_OFF);
     /* Mistura alfa padrão: Cs*As + Cd*(1-As). */
     gsKit_set_primalpha(gs, GS_SETREG_ALPHA(0, 1, 0, 1, 0), 0);
+    /* O gerenciador envia as texturas para a VRAM conforme o uso. */
+    gsKit_TexManager_init(gs);
+    init_textures();
     return 0;
 }
 
@@ -90,10 +121,20 @@ void plat_gradient(float x, float y, float w, float h, Color top,
                             t, t, b, b);
 }
 
+void plat_sprite(int id, float x, float y, float w, float h, float u0,
+                 float v0, float u1, float v1, Color tint)
+{
+    GSTEXTURE *t = &textures[id];
+    gsKit_TexManager_bind(gs, t);
+    gsKit_prim_sprite_texture(gs, t, x, y, u0, v0, x + w, y + h, u1, v1, 1,
+                              to_gs_tint(tint));
+}
+
 void plat_end_frame(void)
 {
     gsKit_queue_exec(gs);
     gsKit_sync_flip(gs);
+    gsKit_TexManager_nextFrame(gs);
 }
 
 int plat_pad_connected(int pad)
