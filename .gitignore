@@ -1,0 +1,5 @@
+*.o
+*.elf
+*.ppm
+4conexoes_host
+tests/test_board

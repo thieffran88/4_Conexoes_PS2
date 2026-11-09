@@ -1,0 +1,26 @@
+# Compilação no PC (Linux/macOS) para testes e capturas de tela.
+#   make -f Makefile.host test     -> roda os testes de regras/IA
+#   make -f Makefile.host host     -> gera ./4conexoes_host
+CC ?= cc
+CFLAGS ?= -O2 -Wall -Wextra -std=c99
+LDLIBS = -lm
+
+CORE = src/board.c src/ai.c
+
+all: test host
+
+tests/test_board: tests/test_board.c $(CORE)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+
+test: tests/test_board
+	./tests/test_board
+
+host: 4conexoes_host
+
+4conexoes_host: host/main_host.c host/platform_host.c src/game.c src/font.c $(CORE)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
+
+clean:
+	rm -f tests/test_board 4conexoes_host
+
+.PHONY: all test host clean
