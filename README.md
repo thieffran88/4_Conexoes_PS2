@@ -108,7 +108,12 @@ As músicas são composições originais, escritas numa notação de texto no pr
 
 ## Download
 
-As versões prontas ficam em **Releases**. Ao enviar uma tag `v*`, o GitHub Actions compila o ELF, roda os testes e publica a release com `4conexoes.elf` e um `.zip`.
+As versões prontas ficam em **Releases**. Para publicar uma nova versão, use uma destas opções:
+
+- Envie uma tag `v*` (por exemplo, `git tag v1.1.0 && git push origin v1.1.0`).
+- Em **Actions → Build → Run workflow**, preencha o campo "versao" (por exemplo, `v1.1.0`).
+
+Nos dois casos, o GitHub Actions roda os testes, compila o ELF, cria a tag e publica a release com `4conexoes.elf` e um `.zip`.
 
 ## Compilação
 
