@@ -40,7 +40,9 @@ A caixa do jogo original traz modos extras. O 4 Conexões tem um baseado no *Pop
 - Interface no estilo cartum feita com as sprites do projeto: logotipo, fonte amarela com contorno, peças, ícones e botões do controle.
 - **Músicas e efeitos sonoros** originais em estilo chiptune, sintetizados em tempo real: tema do menu, tema da partida, vinhetas de vitória, derrota e empate, e efeitos para cursor, menus, peça caindo e encaixando, retirada, jogada inválida e pausa. A música pode ser desligada no menu.
 - **1 jogador contra o console**, com três níveis: Fácil, Médio e Difícil. A IA usa busca minimax com poda alfa-beta.
-- **2 jogadores**. Com dois controles conectados, cada jogador usa o seu. Com um só, os dois revezam o mesmo controle.
+- **2 jogadores**, cada um com o seu controle: o **controle 1** comanda só o jogador 1 (vermelho) e o **controle 2** comanda só o jogador 2 (amarelo). Um controle não mexe na vez do outro.
+  - O modo só começa com o controle 2 conectado. Se um controle se desconectar no meio da partida, o jogo pede para reconectá-lo quando chega a vez daquele jogador.
+  - Menus, abertura e tela de fim de partida usam o controle 1. Na partida, qualquer jogador pode pausar com o próprio START, e o menu de pausa responde ao controle de quem pausou.
 - Placar de vitórias e empates durante a sessão.
 - Animação da peça caindo (com quique) e da retirada.
 - Prévia da casa onde a peça vai cair. A linha vencedora pisca no fim da partida.
@@ -144,7 +146,7 @@ make -f Makefile.host host   # versão PC para gerar capturas
 ./4conexoes_host DX X w30 shot:tela.ppm
 ```
 
-O executável do PC aceita comandos de controle: `L R U D X O Q T S`, `w<N>` para esperar N quadros, `shot:<arquivo>` para salvar a tela em PPM e `wav:<arquivo>` para salvar o áudio gerado. `./tests/test_audio <pasta>` grava cada música e efeito em WAV.
+O executável do PC aceita comandos de controle: `L R U D X O Q T S`, `2:<botões>` para apertar no controle 2, `pad2`/`nopad2` para conectar ou desconectar o controle 2, `w<N>` para esperar N quadros, `shot:<arquivo>` para salvar a tela em PPM e `wav:<arquivo>` para salvar o áudio gerado. `./tests/test_audio <pasta>` grava cada música e efeito em WAV.
 
 ---
 

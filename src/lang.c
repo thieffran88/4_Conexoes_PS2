@@ -30,6 +30,8 @@ static const char *const STR[S_COUNT][LANG_COUNT] = {
     [S_THINKING]     = { "PENSANDO...", "THINKING...", "PENSANDO..." },
     [S_DRAWS]        = { "EMPATES", "DRAWS", "EMPATES" },
     [S_COL_FULL]     = { "COLUNA CHEIA!", "COLUMN FULL!", "¡COLUMNA LLENA!" },
+    [S_CONNECT_PAD_FMT] = { "CONECTE O CONTROLE %d", "CONNECT CONTROLLER %d",
+                            "CONECTA EL MANDO %d" },
     [S_POP_INVALID]  = { "SÓ PODE RETIRAR PEÇA SUA DA BASE",
                          "YOU CAN ONLY PULL YOUR OWN BOTTOM DISC",
                          "SOLO PUEDES RETIRAR TU FICHA DE ABAJO" },
@@ -127,27 +129,26 @@ static const char *const STR[S_COUNT][LANG_COUNT] = {
         "\x04  RETIRAR PEÇA (MODO RETIRADA)\n"
         "\x05  PAUSA\n"
         "\n"
-        "DOIS JOGADORES: COM DOIS CONTROLES,\n"
-        "CADA UM USA O SEU. COM UM CONTROLE,\n"
-        "PASSEM O CONTROLE A CADA JOGADA.",
+        "O CONTROLE 1 COMANDA O JOGADOR 1\n"
+        "(VERMELHO) E O CONTROLE 2 COMANDA O\n"
+        "JOGADOR 2 (AMARELO).",
 
         "\x01 \x02  CHOOSE COLUMN\n"
         "\x03  DROP DISC\n"
         "\x04  PULL DISC (PULL OUT MODE)\n"
         "\x05  PAUSE\n"
         "\n"
-        "TWO PLAYERS: WITH TWO CONTROLLERS,\n"
-        "EACH PLAYER USES THEIR OWN. WITH ONE,\n"
-        "PASS THE CONTROLLER EVERY TURN.",
+        "CONTROLLER 1 PLAYS AS PLAYER 1 (RED)\n"
+        "AND CONTROLLER 2 PLAYS AS PLAYER 2\n"
+        "(YELLOW).",
 
         "\x01 \x02  ELEGIR COLUMNA\n"
         "\x03  SOLTAR FICHA\n"
         "\x04  RETIRAR FICHA (MODO RETIRADA)\n"
         "\x05  PAUSA\n"
         "\n"
-        "DOS JUGADORES: CON DOS MANDOS, CADA\n"
-        "UNO USA EL SUYO. CON UN MANDO,\n"
-        "PÁSENLO EN CADA TURNO.",
+        "EL MANDO 1 CONTROLA AL JUGADOR 1 (ROJO)\n"
+        "Y EL MANDO 2 AL JUGADOR 2 (AMARILLO).",
     },
 };
 

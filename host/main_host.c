@@ -6,7 +6,7 @@
  *   L R U D X O Q T S   aperta Esq/Dir/Cima/Baixo/X/Círculo/Quadrado/
  *                       Triângulo/Start por 1 quadro (e solta por 1)
  *   2:<cmd>             o mesmo, no controle 2
- *   pad2                conecta o controle 2
+ *   pad2 / nopad2       conecta / desconecta o controle 2
  *   w<N>                espera N quadros
  *   shot:<arquivo.ppm>  salva a tela atual
  *   wav:<arquivo.wav>   salva todo o áudio gerado até agora
@@ -53,6 +53,10 @@ int main(int argc, char **argv)
 
         if (strcmp(a, "pad2") == 0) {
             host_set_connected(1, 1);
+            continue;
+        }
+        if (strcmp(a, "nopad2") == 0) {
+            host_set_connected(1, 0);
             continue;
         }
         if (strncmp(a, "shot:", 5) == 0) {

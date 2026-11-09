@@ -31,6 +31,7 @@ typedef enum {
     S_THINKING,
     S_DRAWS,
     S_COL_FULL,
+    S_CONNECT_PAD_FMT,
     S_POP_INVALID,
     S_WIN,
     S_LOSE,

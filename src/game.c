@@ -75,6 +75,8 @@ static struct {
     int level;
     int help_page;
     int pause_sel;
+    int pause_pad;
+    int title_msg_timer;
 
     /* partida */
     Board board;
@@ -391,18 +393,32 @@ static void read_input(void)
     }
 }
 
-/* Botões do controle de quem está jogando agora. Com dois controles
- * conectados no modo 2 jogadores, cada um usa o seu. */
+/* Controle de cada jogador: o controle 1 só comanda o jogador 1 e o
+ * controle 2 só comanda o jogador 2. */
+static int pad_of(int player)
+{
+    return player == PLAYER1 ? 0 : 1;
+}
+
 static unsigned int input_of(int player)
 {
-    if (!G.vs_cpu && plat_pad_connected(1))
-        return G.pressed[player == PLAYER1 ? 0 : 1];
+    return G.pressed[pad_of(player)];
+}
+
+/* Menus, abertura e fim de partida: controle 1. */
+static unsigned int input_menu(void)
+{
     return G.pressed[0];
 }
 
-static unsigned int input_any(void)
+/* Controle que o jogador da vez precisa e que está desconectado
+ * (0 = nenhum). */
+static int missing_pad(void)
 {
-    return G.pressed[0] | G.pressed[1];
+    int p = G.board.current;
+    if (G.vs_cpu && p == G.cpu_player)
+        return 0;
+    return plat_pad_connected(pad_of(p)) ? 0 : pad_of(p) + 1;
 }
 
 /* ---------------------------------------------------------------- */
@@ -540,11 +556,19 @@ static void update_play(void)
     int p = G.board.current;
     unsigned int in;
 
-    if (input_any() & BTN_START) {
-        audio_sfx(SFX_PAUSE);
-        G.pause_sel = PAUSE_CONTINUE;
-        set_state(ST_PAUSE);
-        return;
+    {
+        int q;
+        for (q = PLAYER1; q <= PLAYER2; q++) {
+            if (G.vs_cpu && q == G.cpu_player)
+                continue;
+            if (input_of(q) & BTN_START) {
+                audio_sfx(SFX_PAUSE);
+                G.pause_sel = PAUSE_CONTINUE;
+                G.pause_pad = pad_of(q);
+                set_state(ST_PAUSE);
+                return;
+            }
+        }
     }
 
     if (G.vs_cpu && p == G.cpu_player) {
@@ -587,7 +611,7 @@ static void update_anim(void)
 
 static void update_over(void)
 {
-    unsigned int in = input_any();
+    unsigned int in = input_menu();
     if (G.state_frames < 20)
         return;
     if (in & BTN_CROSS) {
@@ -603,7 +627,8 @@ static void update_over(void)
 
 static void update_pause(void)
 {
-    unsigned int in = input_any();
+    /* O menu de pausa responde ao controle de quem pausou. */
+    unsigned int in = G.pressed[G.pause_pad];
     if (in & (BTN_UP | BTN_DOWN)) audio_sfx(SFX_MOVE);
     if (in & BTN_UP) G.pause_sel = (G.pause_sel + PAUSE_COUNT - 1) % PAUSE_COUNT;
     if (in & BTN_DOWN) G.pause_sel = (G.pause_sel + 1) % PAUSE_COUNT;
@@ -622,7 +647,7 @@ static void update_pause(void)
 
 static void update_splash(void)
 {
-    if (G.state_frames > 10 && (input_any() & (BTN_START | BTN_CROSS))) {
+    if (G.state_frames > 10 && (input_menu() & (BTN_START | BTN_CROSS))) {
         audio_sfx(SFX_START);
         G.lang_sel = lang_get();
         G.lang_return = 0;
@@ -632,7 +657,7 @@ static void update_splash(void)
 
 static void update_lang(void)
 {
-    unsigned int in = input_any();
+    unsigned int in = input_menu();
     if (in & (BTN_UP | BTN_DOWN)) audio_sfx(SFX_MOVE);
     if (in & BTN_UP) G.lang_sel = (G.lang_sel + LANG_COUNT - 1) % LANG_COUNT;
     if (in & BTN_DOWN) G.lang_sel = (G.lang_sel + 1) % LANG_COUNT;
@@ -648,7 +673,7 @@ static void update_lang(void)
 
 static void update_title(void)
 {
-    unsigned int in = input_any();
+    unsigned int in = input_menu();
     if (in & (BTN_UP | BTN_DOWN)) audio_sfx(SFX_MOVE);
     if (in & BTN_UP) G.menu_sel = (G.menu_sel + MENU_COUNT - 1) % MENU_COUNT;
     if (in & BTN_DOWN) G.menu_sel = (G.menu_sel + 1) % MENU_COUNT;
@@ -675,7 +700,14 @@ static void update_title(void)
             if (in & BTN_CROSS) start_match(1);
             break;
         case MENU_2P:
-            if (in & BTN_CROSS) start_match(0);
+            if (in & BTN_CROSS) {
+                if (plat_pad_connected(1)) {
+                    start_match(0);
+                } else {
+                    audio_sfx(SFX_INVALID);
+                    G.title_msg_timer = 120;
+                }
+            }
             break;
         case MENU_HELP:
             if (in & BTN_CROSS) {
@@ -698,7 +730,7 @@ static void update_title(void)
 
 static void update_help(void)
 {
-    unsigned int in = input_any();
+    unsigned int in = input_menu();
     if (in & (BTN_LEFT | BTN_RIGHT)) audio_sfx(SFX_MOVE);
     if (in & (BTN_RIGHT | BTN_CROSS)) {
         if (G.help_page < HELP_PAGES - 1) G.help_page++;
@@ -960,7 +992,17 @@ static void draw_hud(void)
         else hints(h1, 3, H - 12);
     }
 
-    if (G.msg_timer > 0) {
+    if (G.state == ST_PLAY && missing_pad()) {
+        char mb[64];
+        float s, w, y = G.by + BOARD_ROWS * G.cell / 2 - 18;
+        snprintf(mb, sizeof(mb), tr(S_CONNECT_PAD_FMT), missing_pad());
+        s = fit_scale(mb, 2, BOARD_COLS * G.cell - 30);
+        w = font_width(mb, s) + 28;
+        if ((G.frame / 30) % 2 == 0) {
+            cartoon_box(W / 2 - w / 2, y, w, 34, 14, COL_BTN, COL_BTN_DARK);
+            text_center(mb, W / 2, y + 17 - 3.5f * s, s, WHITE);
+        }
+    } else if (G.msg_timer > 0) {
         const char *m = tr(G.msg);
         float s = fit_scale(m, 2, BOARD_COLS * G.cell - 30);
         float w = font_width(m, s) + 28;
@@ -1140,6 +1182,17 @@ static void draw_title(void)
         menu_button(W / 2, y, 290, 30, i == G.menu_sel, icon, fl, buf, arrows);
     }
 
+    if (G.title_msg_timer > 0) {
+        /* "2 jogadores" sem o controle 2 conectado */
+        char mb[64];
+        float s, w, y = 158 + MENU_2P * 37.0f + 34;
+        snprintf(mb, sizeof(mb), tr(S_CONNECT_PAD_FMT), 2);
+        s = fit_scale(mb, 2, 380);
+        w = font_width(mb, s) + 28;
+        cartoon_box(W / 2 - w / 2, y, w, 30, 13, COL_BTN_SEL, COL_BTN_SEL_D);
+        text_center(mb, W / 2, y + 15 - 3.5f * s, s, WHITE);
+    }
+
     {
         static const Hint h[] = {
             { HI_UD, S_H_CHOOSE }, { HI_LR, S_H_CHANGE }, { HI_CROSS, S_H_CONFIRM }
@@ -1310,6 +1363,8 @@ void game_frame(void)
     read_input();
     if (G.msg_timer > 0)
         G.msg_timer--;
+    if (G.title_msg_timer > 0)
+        G.title_msg_timer--;
     for (p = 1; p <= 2; p++)
         if (G.expr_timer[p] > 0)
             G.expr_timer[p]--;
