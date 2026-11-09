@@ -12,15 +12,19 @@ all: test host
 tests/test_board: tests/test_board.c $(CORE)
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^) $(LDLIBS)
 
-test: tests/test_board
+tests/test_audio: tests/test_audio.c src/audio.c
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^) $(LDLIBS)
+
+test: tests/test_board tests/test_audio
 	./tests/test_board
+	./tests/test_audio
 
 host: 4conexoes_host
 
-4conexoes_host: host/main_host.c host/platform_host.c src/game.c src/font.c src/bigfont.c src/lang.c src/assets.c assets/assets.pak $(CORE)
+4conexoes_host: host/main_host.c host/platform_host.c src/game.c src/font.c src/bigfont.c src/lang.c src/audio.c src/assets.c assets/assets.pak $(CORE)
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^) $(LDLIBS)
 
 clean:
-	rm -f tests/test_board 4conexoes_host
+	rm -f tests/test_board tests/test_audio 4conexoes_host
 
 .PHONY: all test host clean

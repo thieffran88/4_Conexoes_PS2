@@ -9,9 +9,16 @@
 #include <libpad.h>
 #include <gsKit.h>
 #include <dmaKit.h>
+#include <audsrv.h>
+#include <sbv_patches.h>
 
 #include "assets.h"
+#include "audio.h"
 #include "platform.h"
+
+/* audsrv.irx embutido no ELF (ver irx_ps2.c). */
+extern unsigned char audsrv_irx[];
+extern unsigned char audsrv_irx_end[];
 
 static GSGLOBAL *gs;
 static GSTEXTURE textures[SPR_COUNT];
@@ -68,9 +75,81 @@ static void init_pads(void)
     padPortOpen(1, 0, pad_buf[1]);
 }
 
+/* ---------------------------------------------------------------- */
+/* Áudio                                                             */
+/* ---------------------------------------------------------------- */
+#define AUDIO_TARGET_BYTES (AUDIO_RATE * 2 * 6 / 60) /* ~6 quadros */
+
+static int audio_ok;
+static int audio_ring;
+static short audio_buf[8192];
+
+static void init_audio(void)
+{
+    struct audsrv_fmt_t fmt;
+    int ret, irx_ret;
+
+    /* Permite carregar módulos a partir da memória (BIOS antigas). */
+    sbv_patch_enable_lmb();
+
+    ret = SifLoadModule("rom0:LIBSD", 0, NULL);
+    if (ret < 0) {
+        printf("4 Conexoes: falha ao carregar LIBSD (%d)\n", ret);
+        return;
+    }
+    ret = SifExecModuleBuffer(audsrv_irx, (u32)(audsrv_irx_end - audsrv_irx),
+                              0, NULL, &irx_ret);
+    if (ret < 0) {
+        printf("4 Conexoes: falha ao carregar audsrv (%d)\n", ret);
+        return;
+    }
+    if (audsrv_init() != 0) {
+        printf("4 Conexoes: audsrv_init falhou\n");
+        return;
+    }
+    fmt.freq = AUDIO_RATE;
+    fmt.bits = 16;
+    fmt.channels = 1;
+    if (audsrv_set_format(&fmt) != 0) {
+        printf("4 Conexoes: formato de audio recusado\n");
+        return;
+    }
+    audsrv_set_volume(MAX_VOLUME);
+    audio_ring = audsrv_available(); /* buffer vazio = tamanho total */
+    audio_ok = audio_ring > 0;
+}
+
+/* Envia amostras até o buffer ter 'target' bytes na fila. */
+static void audio_feed(int target)
+{
+    int queued, bytes, n;
+    if (!audio_ok)
+        return;
+    queued = audio_ring - audsrv_available();
+    bytes = target - queued;
+    if (bytes > audio_ring - queued)
+        bytes = audio_ring - queued;
+    while (bytes >= 64) {
+        n = bytes / 2;
+        if (n > (int)(sizeof(audio_buf) / 2))
+            n = sizeof(audio_buf) / 2;
+        n &= ~31;
+        audio_mix(audio_buf, n);
+        audsrv_play_audio((char *)audio_buf, n * 2);
+        bytes -= n * 2;
+    }
+}
+
+void plat_audio_long_task(void)
+{
+    /* Enche o buffer inteiro: cobre a pausa enquanto a IA pensa. */
+    audio_feed(audio_ring);
+}
+
 int plat_init(void)
 {
     init_pads();
+    init_audio();
 
     gs = gsKit_init_global();
     gs->PSM = GS_PSM_CT24;
@@ -135,6 +214,7 @@ void plat_end_frame(void)
     gsKit_queue_exec(gs);
     gsKit_sync_flip(gs);
     gsKit_TexManager_nextFrame(gs);
+    audio_feed(AUDIO_TARGET_BYTES);
 }
 
 int plat_pad_connected(int pad)

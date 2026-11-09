@@ -38,6 +38,7 @@ A caixa do jogo original traz modos extras. O 4 Conexões tem um baseado no *Pop
 - **Três idiomas: Português, Inglês e Espanhol.** O idioma é escolhido logo depois da tela de abertura e pode ser trocado no menu.
 - **Personagens:** o jogador 1 (vermelho) é o garoto de boné e o jogador 2 (amarelo) é a garota de rabo de cavalo. Os retratos mudam de expressão durante a partida (concentração, surpresa, comemoração, tristeza) e as poses de corpo inteiro reagem à vitória, à derrota e ao console "pensando".
 - Interface no estilo cartum feita com as sprites do projeto: logotipo, fonte amarela com contorno, peças, ícones e botões do controle.
+- **Músicas e efeitos sonoros** originais em estilo chiptune, sintetizados em tempo real: tema do menu, tema da partida, vinhetas de vitória, derrota e empate, e efeitos para cursor, menus, peça caindo e encaixando, retirada, jogada inválida e pausa. A música pode ser desligada no menu.
 - **1 jogador contra o console**, com três níveis: Fácil, Médio e Difícil. A IA usa busca minimax com poda alfa-beta.
 - **2 jogadores**. Com dois controles conectados, cada jogador usa o seu. Com um só, os dois revezam o mesmo controle.
 - Placar de vitórias e empates durante a sessão.
@@ -66,6 +67,8 @@ src/
   font.c/h           fonte bitmap 5x7 com acentos (UTF-8)
   bigfont.c/h        fonte grande recortada da arte (títulos e botões)
   lang.c/h           textos em Português, Inglês e Espanhol
+  audio.c/h          sintetizador: músicas (notação própria) e efeitos
+  irx_ps2.c          audsrv.irx do PS2SDK embutido no ELF
   assets.c/h         tabelas das sprites (gerado por tools/make_assets.py)
   game.c/h           telas, menus, animações e desenho
   platform.h         interface de vídeo e controles
@@ -92,6 +95,21 @@ No PS2, as texturas ficam na RAM e o gerenciador de texturas do gsKit as envia p
 
 A lógica (`board`, `ai`, `game`, `font`) não depende do hardware. Toda a parte específica do PS2 fica em `platform_ps2.c`.
 
+## Áudio
+
+O som é gerado pelo próprio jogo, sem arquivos de áudio. O sintetizador em `src/audio.c` tem quatro canais de música e seis vozes de efeitos:
+
+- **Melodia:** onda quadrada com vibrato.
+- **Harmonia:** arpejos em onda quadrada fina.
+- **Baixo:** onda triangular.
+- **Bateria:** bumbo, caixa e chimbal feitos de seno e ruído.
+
+As músicas são composições originais, escritas numa notação de texto no próprio código (uma semicolcheia por token). No PS2, o jogo gera PCM mono a 22 050 Hz e o envia ao módulo `audsrv`, que fica embutido no ELF. Quando o console vai pensar, o buffer de áudio é preenchido inteiro para a música não cortar.
+
+## Download
+
+As versões prontas ficam em **Releases**. Ao enviar uma tag `v*`, o GitHub Actions compila o ELF, roda os testes e publica a release com `4conexoes.elf` e um `.zip`.
+
 ## Compilação
 
 ### PlayStation 2
@@ -116,12 +134,12 @@ Toda vez que há um push, o GitHub Actions (`.github/workflows/build.yml`) compi
 ### Testes no PC
 
 ```sh
-make -f Makefile.host test   # testes de regras e IA
+make -f Makefile.host test   # testes de regras, IA e áudio
 make -f Makefile.host host   # versão PC para gerar capturas
 ./4conexoes_host DX X w30 shot:tela.ppm
 ```
 
-O executável do PC aceita comandos de controle: `L R U D X O Q T S`, `w<N>` para esperar N quadros e `shot:<arquivo>` para salvar a tela em PPM.
+O executável do PC aceita comandos de controle: `L R U D X O Q T S`, `w<N>` para esperar N quadros, `shot:<arquivo>` para salvar a tela em PPM e `wav:<arquivo>` para salvar o áudio gerado. `./tests/test_audio <pasta>` grava cada música e efeito em WAV.
 
 ---
 

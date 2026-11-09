@@ -10,6 +10,7 @@
 #include <stdlib.h>
 
 #include "../src/assets.h"
+#include "../src/audio.h"
 #include "../src/platform.h"
 
 #define W 640
@@ -184,7 +185,52 @@ void plat_sprite(int id, float x, float y, float w, float h, float u0,
     }
 }
 
-void plat_end_frame(void) {}
+/* Áudio: cada quadro gera 1/60 s de amostras e guarda para gravar em WAV. */
+static short *audio_buf;
+static int audio_len, audio_cap;
+static double audio_acc;
+
+static void audio_frame(int n)
+{
+    if (audio_len + n > audio_cap) {
+        audio_cap = (audio_len + n) * 2 + 4096;
+        audio_buf = realloc(audio_buf, sizeof(short) * audio_cap);
+    }
+    audio_mix(audio_buf + audio_len, n);
+    audio_len += n;
+}
+
+void plat_audio_long_task(void) {}
+
+void plat_end_frame(void)
+{
+    int n;
+    audio_acc += AUDIO_RATE / 60.0;
+    n = (int)audio_acc;
+    audio_acc -= n;
+    audio_frame(n);
+}
+
+int host_save_wav(const char *path)
+{
+    FILE *f = fopen(path, "wb");
+    int rate = AUDIO_RATE, bytes = audio_len * 2, v;
+    short fmt = 1, ch = 1, align = 2, bits = 16;
+    if (!f)
+        return -1;
+    fwrite("RIFF", 1, 4, f);
+    v = 36 + bytes; fwrite(&v, 4, 1, f);
+    fwrite("WAVEfmt ", 1, 8, f);
+    v = 16; fwrite(&v, 4, 1, f);
+    fwrite(&fmt, 2, 1, f); fwrite(&ch, 2, 1, f);
+    fwrite(&rate, 4, 1, f); v = rate * 2; fwrite(&v, 4, 1, f);
+    fwrite(&align, 2, 1, f); fwrite(&bits, 2, 1, f);
+    fwrite("data", 1, 4, f);
+    fwrite(&bytes, 4, 1, f);
+    fwrite(audio_buf, 2, audio_len, f);
+    fclose(f);
+    return 0;
+}
 
 unsigned int plat_buttons(int pad) { return connected[pad] ? buttons[pad] : 0; }
 int plat_pad_connected(int pad) { return connected[pad]; }

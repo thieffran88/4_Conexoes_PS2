@@ -9,6 +9,7 @@
  *   pad2                conecta o controle 2
  *   w<N>                espera N quadros
  *   shot:<arquivo.ppm>  salva a tela atual
+ *   wav:<arquivo.wav>   salva todo o áudio gerado até agora
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +21,7 @@
 void host_set_buttons(int pad, unsigned int b);
 void host_set_connected(int pad, int c);
 int host_save_ppm(const char *path);
+int host_save_wav(const char *path);
 
 static unsigned int button_of(char c)
 {
@@ -56,6 +58,13 @@ int main(int argc, char **argv)
         if (strncmp(a, "shot:", 5) == 0) {
             if (host_save_ppm(a + 5) != 0) {
                 fprintf(stderr, "falha ao salvar %s\n", a + 5);
+                return 1;
+            }
+            continue;
+        }
+        if (strncmp(a, "wav:", 4) == 0) {
+            if (host_save_wav(a + 4) != 0) {
+                fprintf(stderr, "falha ao salvar %s\n", a + 4);
                 return 1;
             }
             continue;

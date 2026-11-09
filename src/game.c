@@ -7,6 +7,7 @@
 
 #include "ai.h"
 #include "assets.h"
+#include "audio.h"
 #include "bigfont.h"
 #include "board.h"
 #include "font.h"
@@ -43,8 +44,8 @@ static const Color PLAYER_COL[3] = { 0, RGB(228, 40, 40), RGB(255, 200, 20) };
 /* ---------------------------------------------------------------- */
 enum { ST_SPLASH, ST_LANG, ST_TITLE, ST_HELP, ST_PLAY, ST_ANIM, ST_OVER,
        ST_PAUSE };
-enum { MENU_CPU, MENU_2P, MENU_MODE, MENU_LEVEL, MENU_HELP, MENU_LANG,
-       MENU_COUNT };
+enum { MENU_CPU, MENU_2P, MENU_MODE, MENU_LEVEL, MENU_MUSIC, MENU_HELP,
+       MENU_LANG, MENU_COUNT };
 enum { PAUSE_CONTINUE, PAUSE_RESTART, PAUSE_MENU, PAUSE_COUNT };
 
 /* Poses do corpo inteiro (mesma ordem em assets.h). */
@@ -424,6 +425,7 @@ static void show_msg(StrId m)
 {
     G.msg = m;
     G.msg_timer = 100;
+    audio_sfx(SFX_INVALID);
     react(G.board.current, FACE_SURPRISE, 70);
 }
 
@@ -464,6 +466,9 @@ static void begin_move(int col, int type)
     if (type == MOVE_DROP) {
         G.anim_row = G.board.heights[col];
         G.anim_y = selector_y();
+        audio_sfx(SFX_DROP);
+    } else {
+        audio_sfx(SFX_POP);
     }
     set_state(ST_ANIM);
 }
@@ -471,6 +476,8 @@ static void begin_move(int col, int type)
 static void finish_move(void)
 {
     int mover = G.board.current;
+    if (G.anim_type == MOVE_DROP && !G.anim_bounced)
+        audio_sfx(SFX_LAND);
     board_play(&G.board, G.anim_col, G.anim_type);
     G.cpu_timer = 0;
     G.cpu_planned = 0;
@@ -481,6 +488,13 @@ static void finish_move(void)
             else G.draws++;
             G.scored = 1;
         }
+        if (G.board.result == RESULT_DRAW)
+            audio_music(MUS_DRAW);
+        else if (G.vs_cpu && ((G.board.result == RESULT_WIN1) ==
+                              (G.cpu_player == PLAYER1)))
+            audio_music(MUS_LOSE);
+        else
+            audio_music(MUS_WIN);
         set_state(ST_OVER);
     } else {
         react(mover, FACE_GRIN, 45);
@@ -509,13 +523,14 @@ static void update_cpu(void)
 {
     G.cpu_timer++;
     if (!G.cpu_planned && G.cpu_timer >= CPU_THINK_FRAMES) {
+        plat_audio_long_task();
         G.cpu_move = ai_choose(&G.board, G.level, &G.seed);
         G.cpu_planned = 1;
         G.cpu_timer = 0;
     }
     if (G.cpu_planned && G.cpu_timer % CPU_STEP_FRAMES == 0) {
-        if (G.cursor < G.cpu_move.col) G.cursor++;
-        else if (G.cursor > G.cpu_move.col) G.cursor--;
+        if (G.cursor < G.cpu_move.col) { G.cursor++; audio_sfx(SFX_TICK); }
+        else if (G.cursor > G.cpu_move.col) { G.cursor--; audio_sfx(SFX_TICK); }
         else try_move(G.cpu_move.col, G.cpu_move.type);
     }
 }
@@ -526,6 +541,7 @@ static void update_play(void)
     unsigned int in;
 
     if (input_any() & BTN_START) {
+        audio_sfx(SFX_PAUSE);
         G.pause_sel = PAUSE_CONTINUE;
         set_state(ST_PAUSE);
         return;
@@ -537,8 +553,8 @@ static void update_play(void)
     }
 
     in = input_of(p);
-    if ((in & BTN_LEFT) && G.cursor > 0) G.cursor--;
-    if ((in & BTN_RIGHT) && G.cursor < BOARD_COLS - 1) G.cursor++;
+    if ((in & BTN_LEFT) && G.cursor > 0) { G.cursor--; audio_sfx(SFX_MOVE); }
+    if ((in & BTN_RIGHT) && G.cursor < BOARD_COLS - 1) { G.cursor++; audio_sfx(SFX_MOVE); }
     if (in & BTN_CROSS)
         try_move(G.cursor, MOVE_DROP);
     else if (in & BTN_SQUARE)
@@ -556,6 +572,7 @@ static void update_anim(void)
             if (!G.anim_bounced && G.anim_v > 6) {
                 G.anim_v = -G.anim_v * 0.25f;
                 G.anim_bounced = 1;
+                audio_sfx(SFX_LAND);
             } else {
                 finish_move();
             }
@@ -574,10 +591,12 @@ static void update_over(void)
     if (G.state_frames < 20)
         return;
     if (in & BTN_CROSS) {
+        audio_sfx(SFX_START);
         /* As partidas seguintes alternam quem começa. */
         G.first_player = board_other(G.first_player);
         start_round();
     } else if (in & (BTN_START | BTN_TRIANGLE)) {
+        audio_sfx(SFX_BACK);
         set_state(ST_TITLE);
     }
 }
@@ -585,13 +604,16 @@ static void update_over(void)
 static void update_pause(void)
 {
     unsigned int in = input_any();
+    if (in & (BTN_UP | BTN_DOWN)) audio_sfx(SFX_MOVE);
     if (in & BTN_UP) G.pause_sel = (G.pause_sel + PAUSE_COUNT - 1) % PAUSE_COUNT;
     if (in & BTN_DOWN) G.pause_sel = (G.pause_sel + 1) % PAUSE_COUNT;
     if (in & (BTN_START | BTN_CIRCLE | BTN_TRIANGLE)) {
+        audio_sfx(SFX_BACK);
         set_state(ST_PLAY);
         return;
     }
     if (in & BTN_CROSS) {
+        audio_sfx(SFX_SELECT);
         if (G.pause_sel == PAUSE_CONTINUE) set_state(ST_PLAY);
         else if (G.pause_sel == PAUSE_RESTART) start_round();
         else set_state(ST_TITLE);
@@ -601,6 +623,7 @@ static void update_pause(void)
 static void update_splash(void)
 {
     if (G.state_frames > 10 && (input_any() & (BTN_START | BTN_CROSS))) {
+        audio_sfx(SFX_START);
         G.lang_sel = lang_get();
         G.lang_return = 0;
         set_state(ST_LANG);
@@ -610,12 +633,15 @@ static void update_splash(void)
 static void update_lang(void)
 {
     unsigned int in = input_any();
+    if (in & (BTN_UP | BTN_DOWN)) audio_sfx(SFX_MOVE);
     if (in & BTN_UP) G.lang_sel = (G.lang_sel + LANG_COUNT - 1) % LANG_COUNT;
     if (in & BTN_DOWN) G.lang_sel = (G.lang_sel + 1) % LANG_COUNT;
     if (in & (BTN_CROSS | BTN_START)) {
+        audio_sfx(SFX_SELECT);
         lang_set(G.lang_sel);
         set_state(ST_TITLE);
     } else if ((in & BTN_CIRCLE) && G.lang_return) {
+        audio_sfx(SFX_BACK);
         set_state(ST_TITLE);
     }
 }
@@ -623,12 +649,22 @@ static void update_lang(void)
 static void update_title(void)
 {
     unsigned int in = input_any();
+    if (in & (BTN_UP | BTN_DOWN)) audio_sfx(SFX_MOVE);
     if (in & BTN_UP) G.menu_sel = (G.menu_sel + MENU_COUNT - 1) % MENU_COUNT;
     if (in & BTN_DOWN) G.menu_sel = (G.menu_sel + 1) % MENU_COUNT;
 
     if (in & (BTN_LEFT | BTN_RIGHT | BTN_CROSS)) {
         int dir = (in & BTN_LEFT) ? -1 : 1;
+        if (G.menu_sel == MENU_CPU || G.menu_sel == MENU_2P) {
+            if (in & BTN_CROSS)
+                audio_sfx(SFX_START);
+        } else if ((in & BTN_CROSS) || G.menu_sel != MENU_HELP) {
+            audio_sfx(SFX_SELECT);
+        }
         switch (G.menu_sel) {
+        case MENU_MUSIC:
+            audio_set_music_enabled(!audio_music_enabled());
+            break;
         case MENU_MODE:
             G.popout = !G.popout;
             break;
@@ -663,12 +699,16 @@ static void update_title(void)
 static void update_help(void)
 {
     unsigned int in = input_any();
+    if (in & (BTN_LEFT | BTN_RIGHT)) audio_sfx(SFX_MOVE);
     if (in & (BTN_RIGHT | BTN_CROSS)) {
         if (G.help_page < HELP_PAGES - 1) G.help_page++;
         else if (in & BTN_CROSS) set_state(ST_TITLE);
     }
     if ((in & BTN_LEFT) && G.help_page > 0) G.help_page--;
-    if (in & (BTN_CIRCLE | BTN_TRIANGLE | BTN_START)) set_state(ST_TITLE);
+    if (in & (BTN_CIRCLE | BTN_TRIANGLE | BTN_START)) {
+        audio_sfx(SFX_BACK);
+        set_state(ST_TITLE);
+    }
 }
 
 /* ---------------------------------------------------------------- */
@@ -1059,7 +1099,7 @@ static void draw_title(void)
 
     for (i = 0; i < MENU_COUNT; i++) {
         int icon = -1, fl = -1, arrows = 0;
-        float y = 162 + i * 41.0f;
+        float y = 158 + i * 37.0f;
         switch (i) {
         case MENU_CPU:
             snprintf(buf, sizeof(buf), "%s", tr(S_MENU_CPU));
@@ -1081,6 +1121,12 @@ static void draw_title(void)
             icon = SPR_ICON_TROPHY;
             arrows = 1;
             break;
+        case MENU_MUSIC:
+            snprintf(buf, sizeof(buf), "%s: %s", tr(S_MUSIC),
+                     tr(audio_music_enabled() ? S_ON : S_OFF));
+            icon = SPR_ICON_SOUND;
+            arrows = 1;
+            break;
         case MENU_HELP:
             snprintf(buf, sizeof(buf), "%s", tr(S_HELP));
             icon = SPR_ICON_HELP;
@@ -1091,7 +1137,7 @@ static void draw_title(void)
             arrows = 1;
             break;
         }
-        menu_button(W / 2, y, 290, 33, i == G.menu_sel, icon, fl, buf, arrows);
+        menu_button(W / 2, y, 290, 30, i == G.menu_sel, icon, fl, buf, arrows);
     }
 
     {
@@ -1238,6 +1284,7 @@ void game_init(unsigned int seed)
     int i, W = plat_width(), H = plat_height();
 
     memset(&G, 0, sizeof(G));
+    audio_init(AUDIO_RATE);
     G.seed = seed ? seed : 12345u;
     G.level = AI_MEDIUM;
     G.first_player = PLAYER1;
@@ -1276,6 +1323,17 @@ void game_frame(void)
     case ST_ANIM:   update_anim();   break;
     case ST_OVER:   update_over();   break;
     case ST_PAUSE:  update_pause();  break;
+    }
+
+    switch (G.state) {
+    case ST_SPLASH: case ST_LANG: case ST_TITLE: case ST_HELP:
+        audio_music(MUS_TITLE);
+        break;
+    case ST_PLAY: case ST_ANIM: case ST_PAUSE:
+        audio_music(MUS_GAME);
+        break;
+    default:
+        break;
     }
 
     plat_begin_frame(BLACK);

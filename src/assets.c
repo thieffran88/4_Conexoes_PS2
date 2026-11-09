@@ -1,7 +1,7 @@
 /* Gerado por tools/make_assets.py - não edite. */
 #include "assets.h"
 
-/* Pixels de todas as sprites (assets/assets.pak, 2384896 bytes). */
+/* Pixels de todas as sprites (assets/assets.pak, 2393216 bytes). */
 __asm__(
     ".section .rodata\n"
     ".balign 128\n"
@@ -49,13 +49,14 @@ const AssetSprite g_sprites[SPR_COUNT] = {
     { 1461248, 47, 44, 0 }, /* ICON_TROPHY */
     { 1469568, 50, 44, 0 }, /* ICON_CROWN */
     { 1478400, 31, 44, 0 }, /* ICON_HELP */
-    { 1483904, 54, 44, 0 }, /* ICON_STAR */
-    { 1493504, 33, 32, 0 }, /* BTN_CROSS */
-    { 1497728, 33, 32, 0 }, /* BTN_CIRCLE */
-    { 1501952, 33, 32, 0 }, /* BTN_TRIANGLE */
-    { 1506176, 33, 32, 0 }, /* BTN_SQUARE */
-    { 1510400, 640, 448, 2 }, /* COVER */
-    { 2083840, 512, 147, 0 }, /* FONT */
+    { 1483904, 47, 44, 0 }, /* ICON_SOUND */
+    { 1492224, 54, 44, 0 }, /* ICON_STAR */
+    { 1501824, 33, 32, 0 }, /* BTN_CROSS */
+    { 1506048, 33, 32, 0 }, /* BTN_CIRCLE */
+    { 1510272, 33, 32, 0 }, /* BTN_TRIANGLE */
+    { 1514496, 33, 32, 0 }, /* BTN_SQUARE */
+    { 1518720, 640, 448, 2 }, /* COVER */
+    { 2092160, 512, 147, 0 }, /* FONT */
 };
 
 const BigGlyph g_glyphs[] = {

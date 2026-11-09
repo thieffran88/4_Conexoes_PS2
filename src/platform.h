@@ -43,6 +43,10 @@ void plat_sprite(int id, float x, float y, float w, float h, float u0,
                  float v0, float u1, float v1, Color tint);
 void plat_end_frame(void);
 
+/* Avisa que o próximo trecho pode demorar (ex.: IA pensando): a
+ * plataforma enche o buffer de áudio para não haver cortes. */
+void plat_audio_long_task(void);
+
 /* Botões pressionados no controle 'pad' (0 ou 1). */
 unsigned int plat_buttons(int pad);
 int plat_pad_connected(int pad);

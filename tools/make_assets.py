@@ -169,6 +169,7 @@ def build_sprites():
         "ICON_TROPHY": (iface, (486, 567, 63, 59)),
         "ICON_CROWN": (iface, (558, 568, 66, 57)),
         "ICON_HELP": (iface, (688, 563, 44, 61)),
+        "ICON_SOUND": (iface, (739, 570, 58, 54)),
         "ICON_STAR": (iface, (1130, 775, 111, 90)),
         "BTN_CROSS": (sheet, (843, 670, 43, 41)),
         "BTN_CIRCLE": (sheet, (1001, 669, 43, 42)),
